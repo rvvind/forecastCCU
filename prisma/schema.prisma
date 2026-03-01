@@ -35,9 +35,10 @@ model ForecastRequest {
   inputSchemaVersion      String   @default("1.0")
   isArchived              Boolean  @default(false)
 
-  jobs     ForecastJob[]
-  versions ForecastVersion[]
-  diffs    ForecastDiff[]
+  jobs                ForecastJob[]
+  versions            ForecastVersion[]
+  diffs               ForecastDiff[]
+  enrichmentSnapshots EnrichmentSnapshot[]
 
   @@map("forecast_requests")
 }
@@ -51,7 +52,8 @@ model ForecastJob {
   finishedAt        DateTime?
   failureDetails    Json?
 
-  request ForecastRequest @relation(fields: [forecastRequestId], references: [id])
+  request            ForecastRequest     @relation(fields: [forecastRequestId], references: [id])
+  enrichmentSnapshot EnrichmentSnapshot?
 
   @@map("forecast_jobs")
 }
@@ -86,4 +88,19 @@ model ForecastDiff {
 
   @@unique([forecastRequestId, fromVersion, toVersion])
   @@map("forecast_diffs")
+}
+
+model EnrichmentSnapshot {
+  id                String   @id
+  forecastRequestId String
+  jobId             String   @unique
+  retrievedAt       DateTime
+  searchQueries     Json
+  sources           Json
+  normalizedContext Json
+
+  request ForecastRequest @relation(fields: [forecastRequestId], references: [id])
+  job     ForecastJob     @relation(fields: [jobId], references: [id])
+
+  @@map("enrichment_snapshots")
 }

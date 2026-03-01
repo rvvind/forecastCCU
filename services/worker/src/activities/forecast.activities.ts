@@ -1,10 +1,11 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { uuidv7 } from 'uuidv7';
 import {
   computePlaceholderForecast,
   PLACEHOLDER_MODEL_ID,
   PLACEHOLDER_MODEL_VERSION,
 } from '@forecastccu/schema';
+
 
 /**
  * Factory that binds a PrismaClient to all forecast activities.
@@ -79,16 +80,23 @@ export function createForecastActivities(prisma: PrismaClient) {
         return { versionNumber: existing.versionNumber, versionId: existing.id };
       }
 
+      // Read model identity from featureVector so any activity (placeholder or
+      // historical baseline) can supply its own modelId/modelVersion.
+      const fv = forecast.featureVector;
+      const modelId = (fv.modelId as string | undefined) ?? PLACEHOLDER_MODEL_ID;
+      const modelVersion =
+        (fv.modelVersion as string | undefined) ?? PLACEHOLDER_MODEL_VERSION;
+
       const version = await prisma.forecastVersion.create({
         data: {
           id: uuidv7(),
           forecastRequestId,
           versionNumber,
-          modelId: PLACEHOLDER_MODEL_ID,
-          modelVersion: PLACEHOLDER_MODEL_VERSION,
+          modelId,
+          modelVersion,
           globalPeakCcu: forecast.globalPeakCcu,
-          regionalPeakCcu: forecast.regionalPeakCcu,
-          featureVector: forecast.featureVector,
+          regionalPeakCcu: forecast.regionalPeakCcu as unknown as Prisma.InputJsonValue,
+          featureVector: forecast.featureVector as unknown as Prisma.InputJsonValue,
         },
       });
       return { versionNumber: version.versionNumber, versionId: version.id };
@@ -160,7 +168,7 @@ export function createForecastActivities(prisma: PrismaClient) {
           fromVersion: fromVersionNumber,
           toVersion: toVersionNumber,
           inputDiff: {},
-          outputDiff,
+          outputDiff: outputDiff as unknown as Prisma.InputJsonValue,
         },
         update: {},
       });

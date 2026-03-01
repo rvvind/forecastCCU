@@ -3,6 +3,52 @@ export enum Sport {
   IPL = 'IPL',
 }
 
+// ── Enrichment types ─────────────────────────────────────────────────────────
+
+export interface EnrichmentSource {
+  url: string;
+  retrievedAt: string;
+  rawPayload: unknown;
+  snippet: string;
+  extractedFacts: Record<string, unknown>;
+  citationHash: string;
+  /** true when the search provider failed for this query */
+  isMissing?: boolean;
+}
+
+export interface NormalizedContext {
+  totalSources: number;
+  successfulSources: number;
+  snippets: string[];
+  urls: string[];
+}
+
+export const ENRICHMENT_SCHEMA_VERSION = '1.0';
+
+// ── Historical baseline types ──────────────────────────────────────────────
+
+export interface ComparableEvent {
+  eventId: string;
+  sport: string;
+  league: string;
+  platform: string;
+  teams: { home: string; away: string };
+  /** e.g. "regular_season", "wildcard", "divisional", "championship", "super_bowl", "final", etc. */
+  stage: string;
+  startTimeUtc: string; // ISO 8601
+  globalPeak: number;
+  regionalPeak: Record<string, number>;
+}
+
+export interface HistoryResult {
+  comparableEvents: ComparableEvent[];
+  /** eventId → similarity score */
+  selectionScores: Record<string, number>;
+}
+
+export const HISTORICAL_MODEL_ID = 'historical-baseline-v1';
+export const HISTORICAL_MODEL_VERSION = '1.0.0';
+
 export enum JobStatus {
   queued = 'queued',
   running = 'running',

@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { api, type ForecastRequest, type ForecastJob, type ForecastVersion, type ForecastDiff } from '@/lib/api';
+import { api, type ForecastRequest, type ForecastJob, type ForecastVersion, type ForecastDiff, type EnrichmentSnapshot } from '@/lib/api';
 
 const STATUS_COLORS: Record<string, string> = {
   queued: 'bg-yellow-100 text-yellow-700',
@@ -142,6 +142,12 @@ export default function ForecastDetailPage({ params }: PageProps) {
     queryKey: ['versions', id],
     queryFn: () => api.listVersions(id),
     refetchInterval: 3000,
+  });
+
+  const { data: enrichment } = useQuery<EnrichmentSnapshot | null>({
+    queryKey: ['enrichment', id],
+    queryFn: () => api.getEnrichment(id),
+    refetchInterval: (data) => (data == null ? 3000 : false),
   });
 
   const startJobMutation = useMutation({
@@ -294,6 +300,105 @@ export default function ForecastDetailPage({ params }: PageProps) {
             fromVersion={selectedDiff.from}
             toVersion={selectedDiff.to}
           />
+        </div>
+      )}
+
+      {/* Comparable Events (Historical Baseline) */}
+      {latestVersion && (() => {
+        const fv = latestVersion.featureVector as Record<string, unknown> | undefined;
+        const eventIds = fv?.comparableEventIds as string[] | undefined;
+        if (!eventIds || eventIds.length === 0) return null;
+        const scores = fv?.selectionScores as Record<string, number> | undefined;
+        const baselineGlobal = fv?.baseline_global as number | undefined;
+        const baselineRegional = fv?.baseline_regional as Record<string, number> | undefined;
+        return (
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 className="text-sm font-medium text-gray-500 mb-1 uppercase tracking-wide">
+              Comparable Events
+            </h2>
+            <p className="text-xs text-gray-400 mb-3">
+              Historical baseline from {eventIds.length} comparable event{eventIds.length !== 1 ? 's' : ''}.
+              {baselineGlobal !== undefined && (
+                <> Global mean: <span className="font-mono font-medium text-gray-600">{baselineGlobal.toLocaleString()} CCU</span></>
+              )}
+            </p>
+            <div className="space-y-1 mb-3">
+              {eventIds.map((id) => (
+                <div key={id} className="flex items-center justify-between text-xs py-1 border-b border-gray-50 last:border-0">
+                  <span className="font-mono text-gray-700">{id}</span>
+                  {scores?.[id] !== undefined && (
+                    <span className="text-indigo-500 font-medium ml-2">score {scores[id]}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+            {baselineRegional && (
+              <div className="bg-gray-50 rounded-lg p-3 text-xs">
+                <p className="text-gray-500 font-medium mb-1">Baseline Regional</p>
+                <div className="space-y-0.5">
+                  {Object.entries(baselineRegional).map(([region, ccu]) => (
+                    <div key={region} className="flex justify-between">
+                      <span className="font-mono text-gray-600">{region}</span>
+                      <span className="font-mono">{(ccu as number).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Sources & Evidence */}
+      {enrichment && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h2 className="text-sm font-medium text-gray-500 mb-3 uppercase tracking-wide">
+            Sources &amp; Evidence
+          </h2>
+          <p className="text-xs text-gray-400 mb-3">
+            {enrichment.normalizedContext.successfulSources} of{' '}
+            {enrichment.normalizedContext.totalSources} searches returned results
+          </p>
+          <div className="space-y-3">
+            {enrichment.sources.map((source) => (
+              <div
+                key={source.citationHash}
+                className={`rounded-lg border p-3 text-sm ${
+                  source.isMissing
+                    ? 'border-gray-100 bg-gray-50'
+                    : 'border-indigo-100 bg-indigo-50'
+                }`}
+              >
+                {source.isMissing ? (
+                  <p className="text-gray-400 italic text-xs">
+                    Evidence missing —{' '}
+                    {(source.rawPayload as { query?: string })?.query ?? 'unknown query'}
+                  </p>
+                ) : (
+                  <>
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:underline font-mono text-xs break-all"
+                    >
+                      {source.url}
+                    </a>
+                    {source.snippet && (
+                      <p className="text-gray-700 mt-1 leading-relaxed">
+                        {source.snippet}
+                      </p>
+                    )}
+                    <p className="text-gray-400 text-xs mt-1">
+                      Retrieved{' '}
+                      {new Date(source.retrievedAt).toLocaleString()} ·{' '}
+                      <span className="font-mono">{source.citationHash.slice(0, 8)}</span>
+                    </p>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

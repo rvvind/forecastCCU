@@ -14,6 +14,7 @@ import { CreateForecastRequestDto } from './dto/create-forecast-request.dto';
 import { ForecastJobsService } from '../forecast-jobs/forecast-jobs.service';
 import { ForecastVersionsService } from '../forecast-versions/forecast-versions.service';
 import { ForecastDiffsService } from '../forecast-diffs/forecast-diffs.service';
+import { EnrichmentSnapshotsService } from '../enrichment-snapshots/enrichment-snapshots.service';
 
 @ApiTags('forecast-requests')
 @Controller('forecast-requests')
@@ -23,6 +24,7 @@ export class ForecastRequestsController {
     private readonly forecastJobsService: ForecastJobsService,
     private readonly forecastVersionsService: ForecastVersionsService,
     private readonly forecastDiffsService: ForecastDiffsService,
+    private readonly enrichmentSnapshotsService: EnrichmentSnapshotsService,
   ) {}
 
   @Post()
@@ -68,5 +70,12 @@ export class ForecastRequestsController {
     @Param('to', ParseIntPipe) to: number,
   ) {
     return this.forecastDiffsService.findDiff(id, from, to);
+  }
+
+  @Get(':id/enrichment')
+  @ApiOperation({ summary: 'Get the latest enrichment snapshot for this request' })
+  @ApiOkResponse({ description: 'Latest enrichment snapshot or null' })
+  getEnrichment(@Param('id') id: string) {
+    return this.enrichmentSnapshotsService.findLatestForRequest(id);
   }
 }

@@ -69,6 +69,31 @@ export interface ForecastDiff {
   createdAt: string;
 }
 
+export interface EnrichmentSource {
+  url: string;
+  retrievedAt: string;
+  rawPayload: unknown;
+  snippet: string;
+  extractedFacts: Record<string, unknown>;
+  citationHash: string;
+  isMissing?: boolean;
+}
+
+export interface EnrichmentSnapshot {
+  id: string;
+  forecastRequestId: string;
+  jobId: string;
+  retrievedAt: string;
+  searchQueries: string[];
+  sources: EnrichmentSource[];
+  normalizedContext: {
+    totalSources: number;
+    successfulSources: number;
+    snippets: string[];
+    urls: string[];
+  };
+}
+
 // ── API calls ──────────────────────────────────────────────────────────────
 
 export const api = {
@@ -100,5 +125,10 @@ export const api = {
   getDiff: (forecastRequestId: string, from: number, to: number) =>
     fetchJson<ForecastDiff>(
       `/forecast-requests/${forecastRequestId}/diffs/${from}/${to}`,
+    ),
+
+  getEnrichment: (forecastRequestId: string) =>
+    fetchJson<EnrichmentSnapshot | null>(
+      `/forecast-requests/${forecastRequestId}/enrichment`,
     ),
 };

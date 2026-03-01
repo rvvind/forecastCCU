@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateForecastRequestDto } from './dto/create-forecast-request.dto';
 import { uuidv7 } from 'uuidv7';
@@ -18,8 +19,8 @@ export class ForecastRequestsService {
         eventType: dto.eventType,
         startTimeUtc: new Date(dto.startTimeUtc),
         expectedDurationMinutes: dto.expectedDurationMinutes,
-        participants: dto.participants,
-        targetForecastRegions: dto.targetForecastRegions,
+        participants: dto.participants as unknown as Prisma.InputJsonValue,
+        targetForecastRegions: dto.targetForecastRegions as unknown as Prisma.InputJsonValue,
         createdByUserId: dto.createdByUserId ?? 'system',
         inputSchemaVersion: dto.inputSchemaVersion ?? '1.0',
       },

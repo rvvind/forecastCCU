@@ -2,6 +2,11 @@ import { Worker, NativeConnection } from '@temporalio/worker';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
 import { createForecastActivities } from './activities/forecast.activities';
+import { createEnrichmentActivities } from './activities/enrichment.activities';
+import { createHistoryActivities } from './activities/history.activities';
+import { BraveSearchProvider } from './providers/brave-search.provider';
+import { NullSearchProvider } from './providers/null-search.provider';
+import { InMemoryHistoricalDataSource } from './historical/in-memory-historical-data-source';
 import { FORECAST_TASK_QUEUE } from '@forecastccu/schema';
 
 async function run() {
@@ -9,7 +14,24 @@ async function run() {
   await prisma.$connect();
   console.log('Prisma connected');
 
-  const activities = createForecastActivities(prisma);
+  const apiKey = process.env.BRAVE_SEARCH_API_KEY;
+  const searchProvider = apiKey
+    ? new BraveSearchProvider(apiKey)
+    : new NullSearchProvider();
+
+  if (!apiKey) {
+    console.warn(
+      'BRAVE_SEARCH_API_KEY not set – enrichment will mark all sources as missing',
+    );
+  }
+
+  const historicalDataSource = new InMemoryHistoricalDataSource();
+
+  const activities = {
+    ...createForecastActivities(prisma),
+    ...createEnrichmentActivities(prisma, searchProvider),
+    ...createHistoryActivities(prisma, historicalDataSource),
+  };
 
   const connection = await NativeConnection.connect({
     address: process.env.TEMPORAL_ADDRESS ?? 'localhost:7233',
@@ -19,8 +41,7 @@ async function run() {
     connection,
     namespace: process.env.TEMPORAL_NAMESPACE ?? 'default',
     taskQueue: FORECAST_TASK_QUEUE,
-    // Point at the compiled workflow bundle or the TS source (ts-node handles transpilation)
-    workflowsPath: path.resolve(__dirname, './workflows/forecast.workflow'),
+    workflowsPath: path.resolve(__dirname, './workflows/forecast.workflow.ts'),
     activities,
   });
 
