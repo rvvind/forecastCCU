@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Sport {
+  NFL
+  IPL
+}
+
+enum JobStatus {
+  queued
+  running
+  succeeded
+  failed
+}
+
+model ForecastRequest {
+  id                      String   @id
+  createdAt               DateTime @default(now())
+  createdByUserId         String
+  sport                   Sport
+  league                  String
+  platform                String
+  eventName               String
+  eventType               String
+  startTimeUtc            DateTime
+  expectedDurationMinutes Int
+  participants            Json
+  targetForecastRegions   Json
+  inputSchemaVersion      String   @default("1.0")
+  isArchived              Boolean  @default(false)
+
+  jobs     ForecastJob[]
+  versions ForecastVersion[]
+  diffs    ForecastDiff[]
+
+  @@map("forecast_requests")
+}
+
+model ForecastJob {
+  id                String    @id
+  forecastRequestId String
+  status            JobStatus @default(queued)
+  workflowRunId     String?
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  failureDetails    Json?
+
+  request ForecastRequest @relation(fields: [forecastRequestId], references: [id])
+
+  @@map("forecast_jobs")
+}
+
+model ForecastVersion {
+  id                String   @id
+  forecastRequestId String
+  versionNumber     Int
+  modelId           String
+  modelVersion      String
+  globalPeakCcu     Int
+  regionalPeakCcu   Json
+  featureVector     Json
+  createdAt         DateTime @default(now())
+
+  request ForecastRequest @relation(fields: [forecastRequestId], references: [id])
+
+  @@unique([forecastRequestId, versionNumber])
+  @@map("forecast_versions")
+}
+
+model ForecastDiff {
+  id                String   @id
+  forecastRequestId String
+  fromVersion       Int
+  toVersion         Int
+  inputDiff         Json
+  outputDiff        Json
+  createdAt         DateTime @default(now())
+
+  request ForecastRequest @relation(fields: [forecastRequestId], references: [id])
+
+  @@unique([forecastRequestId, fromVersion, toVersion])
+  @@map("forecast_diffs")
+}

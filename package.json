@@ -1,0 +1,30 @@
+{
+  "name": "forecastccu",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "libs/*"
+  ],
+  "scripts": {
+    "dev:api": "npm --workspace apps/api run dev",
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:worker": "npm --workspace services/worker run dev",
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:push": "prisma db push --schema prisma/schema.prisma",
+    "db:studio": "prisma studio --schema prisma/schema.prisma",
+    "build:schema": "npm --workspace libs/schema run build",
+    "test": "npm --workspace apps/api run test && npm --workspace services/worker run test",
+    "test:integration": "npm --workspace apps/api run test:integration"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prisma": "^5.8.1",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.8.1",
+    "uuidv7": "^0.6.3"
+  }
+}

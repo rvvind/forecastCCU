@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@forecastccu/schema": ["../../libs/schema/src"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"]
+}
